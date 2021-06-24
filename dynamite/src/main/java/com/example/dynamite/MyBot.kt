@@ -12,7 +12,7 @@ class MyBot : Bot {
     private var moves: MutableMap<Triple<Pair<Move, Move>, Pair<Move, Move>, Move>, Int> = HashMap<Triple<Pair<Move, Move>, Pair<Move, Move>, Move>, Int>()
 
     private fun randomStandardMove(): Move {
-        when(Random.nextInt(3)) {
+        when(listOf<Int>(0, 1, 2).shuffled().first()) {
             0 -> return Move.R
             1 -> return Move.S
             2 -> return Move.P
@@ -21,16 +21,21 @@ class MyBot : Bot {
     }
 
     private fun randomMove(): Move {
-//        println("randomMove")
-        if (Random.nextInt(70) < myDynamites)
+        if (listOf<Int>(0, 1, 2, 3, 4, 5, 6).shuffled().first() < myDynamites / 10)
             return Move.D
         return randomStandardMove()
     }
 
     override fun makeMove(gamestate: Gamestate): Move {
-        if (gamestate.rounds.size < 3) {
-            return Move.W
+        if (gamestate.rounds.size > 0) {
+            if (gamestate.rounds[gamestate.rounds.size - 1].p2 == Move.D)
+                theirDynamites --
+            if (gamestate.rounds[gamestate.rounds.size - 1].p1 == Move.D)
+                myDynamites --
         }
+
+        if (gamestate.rounds.size < 3)
+            return randomStandardMove()
 
         //update memory
         val last = gamestate.rounds.size - 1
@@ -41,11 +46,11 @@ class MyBot : Bot {
         )
         moves.put(previousMove, moves.getOrDefault(previousMove, 0) + 1)
 
-        if (gamestate.rounds.size > 0) {
-            if (gamestate.rounds[gamestate.rounds.size - 1].p2 == Move.D)
-                theirDynamites --
-            if (gamestate.rounds[gamestate.rounds.size - 1].p1 == Move.D)
-                myDynamites --
+        if (gamestate.rounds.size < 10) {
+            val list = listOf<Int>(0, 1, 1)
+            if (list.shuffled().first() == 0)
+                return randomMove()
+            return randomStandardMove()
         }
 
         //count cases and probability
@@ -55,12 +60,14 @@ class MyBot : Bot {
         var total = 0
         for (move in Move.values()) {
             countCases.put(move, moves.getOrDefault(Triple(last1Move, lastMove, move), 0) + 1)
-            total += countCases.getOrDefault(move, 0)
+            total += countCases.getOrDefault(move, 1)
         }
         if (theirDynamites <= 0) {
-            total -= countCases.getOrDefault(Move.D, 0)
+            total -= countCases.getOrDefault(Move.D, 1)
             countCases.put(Move.D, 0)
         }
+        if (total == 0)
+            total = 1
 
         //decide on move
 
@@ -85,10 +92,14 @@ class MyBot : Bot {
             randomNominator *= 2
 
         randomDenominator *= mostLikelyMoveProb
+        var list = mutableListOf<Int>()
+        for (i in 0..randomNominator)
+            list.add(0)
+        for (i in 0..(randomDenominator - randomNominator))
+            list.add(1)
 
-        if (Random.nextInt(randomDenominator) < randomNominator) {
+        if (list.shuffled().first() == 0)
             return randomMove()
-        }
 
         //history move
         when(mostLikelyMove) {
@@ -119,6 +130,8 @@ class MyBot : Bot {
     }
 
     init {
+        myDynamites = 100
+        theirDynamites = 100
         println("Started new match")
     }
 }
